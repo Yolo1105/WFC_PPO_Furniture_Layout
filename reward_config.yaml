@@ -1,0 +1,7 @@
+desk_window_weight: 0.0
+nightstand_far_penalty: 0.0
+nightstand_near_bed_bonus: 0.0
+path_block_penalty: 0.0
+path_clear_bonus: 0.0
+wardrobe_far_bonus: 0.0
+wardrobe_near_penalty: 0.0

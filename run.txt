@@ -1,0 +1,9 @@
+# Step 1: Train with default reward config
+python train.py
+
+# Step 2: (Optional) Run all ablations
+python ablation_runner.py
+
+# Step 3: View and analyze results
+python compile_reward_csv.py
+python plot_ablation_results.py
