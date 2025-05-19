@@ -1,6 +1,8 @@
 import yaml
 import os
 import subprocess
+from datetime import datetime
+import shutil
 
 ABLATION_CONFIGS = [
     {
@@ -41,12 +43,20 @@ def write_yaml(config: dict, filename="reward_config.yaml"):
         yaml.dump(config, f)
 
 def run_experiment(config_name: str):
-    print(f"\n🚀 Running config: {config_name}")
-    log_path = f"logs/{config_name}.txt"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    print(f"\n🚀 Running config: {config_name} [{timestamp}]")
+
+    log_path = f"logs/{config_name}_{timestamp}.txt"
+    config_backup = f"logs/{config_name}_{timestamp}_config.yaml"
+
     os.makedirs("logs", exist_ok=True)
+    shutil.copy("reward_config.yaml", config_backup)
+
     with open(log_path, "w") as log_file:
         subprocess.run(["python", "train.py"], stdout=log_file, stderr=subprocess.STDOUT)
+
     print(f"✅ Log saved to {log_path}")
+    print(f"🧾 Config saved to {config_backup}")
 
 def main():
     for config in ABLATION_CONFIGS:

@@ -14,7 +14,6 @@ class FurniturePlacementEnv:
         self.candidates = [generate_candidate_positions(spec) for spec in self.furniture_list]
         self.action_dim = max(len(cands) for cands in self.candidates)
 
-        # ✅ 默认奖励配置
         default_scores = {
             "wall_bonus": 0.2,
             "path_clear_bonus": 0.5,
@@ -44,7 +43,6 @@ class FurniturePlacementEnv:
 
         x, y = cands[action]
         w, h = spec.width, spec.height
-
         i0, j0 = int(x * 10), int(y * 10)
         i1 = int((x + w) * 10)
         j1 = int((y + h) * 10)
@@ -54,9 +52,14 @@ class FurniturePlacementEnv:
 
         self.room_state[i0:i1, j0:j1] = 1
         self.placed.append((spec.name, x, y, w, h))
-        reward = 1.0
+        reward = self._compute_reward(spec, x, y, w, h)
 
-        # ✅ 增加规则奖励
+        self.current_index += 1
+        done = self.current_index >= len(self.furniture_list)
+        return self._get_state(), reward, done, {}
+
+    def _compute_reward(self, spec, x, y, w, h):
+        reward = 1.0
         furniture_center = (x + w / 2, y + h / 2)
         door_center = (0.5, 0.5)
 
@@ -105,9 +108,7 @@ class FurniturePlacementEnv:
             elif dist < buffer_dist * 2:
                 reward -= self.rule_scores["inter_item_close_penalty"]
 
-        self.current_index += 1
-        done = self.current_index >= len(self.furniture_list)
-        return self._get_state(), reward, done, {}
+        return reward
 
     def _get_state(self):
         flat_occ = self.room_state.flatten()

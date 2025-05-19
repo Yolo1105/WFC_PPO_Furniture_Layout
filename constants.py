@@ -1,15 +1,20 @@
 from dataclasses import dataclass
 from typing import List
 
-# 基本房间设置
+# === Room Configuration ===
 ROOM_WIDTH = 6.0
 ROOM_HEIGHT = 5.0
 GRID_SIZE = 0.5
 
-# 门口区域默认在左下角 (0,0) 到 (1,1)
+# Door zone (x, y, w, h)
 DOOR_ZONE = (0.0, 0.0, 1.0, 1.0)
 
+# === Visualization Defaults ===
+DEFAULT_DPI = 300                         # 图像保存清晰度
+RENDER_EVERY_N_EPISODES = 25             # 每隔多少集保存一张布局图
+RECORD_LAST_N_EPISODES = 10              # 最后多少集用于录制 GIF
 
+# === Furniture Specification ===
 @dataclass
 class FurnitureSpec:
     name: str
@@ -18,8 +23,6 @@ class FurnitureSpec:
     must_touch_wall: bool = False
     avoid_door_zone: bool = False
 
-
-# MVP家具规格列表
 FURNITURE_LIST: List[FurnitureSpec] = [
     FurnitureSpec("BED", 2.0, 1.5, must_touch_wall=True),
     FurnitureSpec("WARDROBE", 1.0, 1.5, must_touch_wall=True),

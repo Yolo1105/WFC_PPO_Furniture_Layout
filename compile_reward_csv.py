@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import numpy as np
 
 def parse_rewards_for_csv(log_path):
     rewards = []
@@ -25,12 +26,19 @@ def compile_reward_csv(log_dir="logs", output_csv="ablation_rewards.csv"):
             all_data[label] = rewards
             max_len = max(max_len, len(rewards))
 
-    # Pad shorter logs
+    # 补齐长度
     for key in all_data:
         all_data[key] += [None] * (max_len - len(all_data[key]))
 
     df = pd.DataFrame(all_data)
     df.index.name = "Episode"
+
+    # ✅ 添加均值与标准差行
+    mean_row = df.mean(skipna=True)
+    std_row = df.std(skipna=True)
+    df.loc["Mean"] = mean_row
+    df.loc["Std"] = std_row
+
     df.to_csv(output_csv)
     print(f"✅ Saved CSV to {output_csv}")
     return df

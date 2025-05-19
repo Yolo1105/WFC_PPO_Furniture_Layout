@@ -2,10 +2,11 @@ import torch
 import torch.optim as optim
 import numpy as np
 import os
+import imageio
 
 from env import FurniturePlacementEnv
 from model import FurniturePPOAgent
-from constants import ROOM_WIDTH, ROOM_HEIGHT, FURNITURE_LIST
+from constants import ROOM_WIDTH, ROOM_HEIGHT, FURNITURE_LIST, DEFAULT_DPI, RENDER_EVERY_N_EPISODES, RECORD_LAST_N_EPISODES
 from plot import plot_layout
 from wfc import generate_candidate_positions
 
@@ -14,10 +15,10 @@ GAMMA = 0.99
 CLIP_EPS = 0.2
 LEARNING_RATE = 1e-3
 UPDATE_INTERVAL = 5
-VISUALIZE_EVERY = 25
 BUFFER_MARGIN = 0.1
 
 os.makedirs("output", exist_ok=True)
+os.makedirs("videos", exist_ok=True)
 
 def train():
     env = FurniturePlacementEnv()
@@ -26,6 +27,8 @@ def train():
 
     agent = FurniturePPOAgent(state_dim, action_dim)
     optimizer = optim.Adam(agent.parameters(), lr=LEARNING_RATE)
+
+    frames = []
 
     for episode in range(NUM_EPISODES):
         state = torch.tensor(env.reset(), dtype=torch.float32)
@@ -38,7 +41,6 @@ def train():
             env.placed = env.placed[:idx]
             state = torch.tensor(env._get_state(), dtype=torch.float32)
 
-            # Retry logic: sample until no buffer box intersects any previous
             valid_action_found = False
             candidate_list = generate_candidate_positions(spec)
             for attempt in range(len(candidate_list)):
@@ -61,7 +63,14 @@ def train():
                 success = False
                 break
 
-            # Record data for training
+            if episode >= NUM_EPISODES - RECORD_LAST_N_EPISODES:
+                frame_path = "output/temp_frame.png"
+                plot_layout(env.placed, ROOM_WIDTH, ROOM_HEIGHT,
+                            save_path=frame_path,
+                            title=f"Episode {episode+1}",
+                            dpi=DEFAULT_DPI)
+                frames.append(imageio.v2.imread(frame_path))
+
             next_state = torch.tensor(next_state_raw, dtype=torch.float32)
             value = agent.forward(state)[1]
             states.append(state)
@@ -97,24 +106,34 @@ def train():
         total_reward = sum([r.item() for r in rewards])
         print(f"Episode {episode+1}/{NUM_EPISODES} | Total reward: {total_reward:.2f}")
 
-        # ✅ Save & preview layout
-        if (episode + 1) % VISUALIZE_EVERY == 0:
+        if (episode + 1) % RENDER_EVERY_N_EPISODES == 0:
             save_path = f"output/episode_{episode+1}.png"
             plot_layout(env.placed, ROOM_WIDTH, ROOM_HEIGHT,
-                        save_path=save_path, autopreview=True)
+                        save_path=save_path,
+                        title=f"Episode {episode+1}",
+                        dpi=DEFAULT_DPI)
             print(f"📸 Saved layout to {save_path}")
 
+    mp4_path = "videos/final_ppo_run.mp4"
+    if frames:
+        imageio.mimsave(
+            mp4_path,
+            frames,
+            fps=2,
+            codec='libx264',
+            quality=8
+        )
+        print(f"🎥 Saved MP4 to {mp4_path}")
+    else:
+        print("⚠️ No frames recorded. MP4 not saved.")
+
 def violates_buffer_box(x, y, w, h, others, margin) -> bool:
-    """检查该家具是否与已有家具 buffer box 相交"""
     x0, x1 = x - margin, x + w + margin
     y0, y1 = y - margin, y + h + margin
-
     for _, ox, oy, ow, oh in others:
         ox0, ox1 = ox - margin, ox + ow + margin
         oy0, oy1 = oy - margin, oy + oh + margin
-
-        overlap = not (x1 <= ox0 or x0 >= ox1 or y1 <= oy0 or y0 >= oy1)
-        if overlap:
+        if not (x1 <= ox0 or x0 >= ox1 or y1 <= oy0 or y0 >= oy1):
             return True
     return False
 
